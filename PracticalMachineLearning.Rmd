@@ -1,0 +1,83 @@
+---
+title: "Weight Lifting Performance Prediction"
+output: html_document
+---
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+## Script for predicting the manner in which some people did the exercise, using the given data.
+## The prediction variable is "classe".
+
+## Reading the data sets.
+setwd("G:/uni/master/anul 2/Machine Learning/Machine Learning Model")
+
+## Loading packages
+library(lattice)
+library(ggplot2)
+library(caret)
+
+## Creating the training and testing sets based on available data
+data <- read.csv("pml-training.csv")
+inTrain <- createDataPartition(y=data$classe, p=0.7, list=FALSE)
+training <- data[inTrain,]
+testing <- data[-inTrain,]
+
+
+## Some variables have only NA values, we don't want them as preditictors for the model
+count <- vector(mode="numeric",length=0)
+for (i in 1:160) {
+  if (!is.na(training[1,i])) {
+    count <- c(count,i)
+  }
+}
+## count is a vector containing the index for each variable that doesn't have a NA on the first ## row, as 90% of their values are missing, we need to remove these variables from our training ## and testing sets
+training<- training[count]
+testing <- testing[count]
+
+## We also don't need the first 5 variables
+
+training <- training[c(-1, -2, -3, -4, -5)]
+testing <- testing[c(-1, -2, -3, -4, -5)]
+## Only variables without missing values and those that are not representing stats on other variables
+## will be filtered out. In total 53 predictors will be used to predict the classe variable
+
+training <- training[,order(names(training))]
+testing <- testing[,order(names(testing))]
+names(training)
+count2<- c(1:12, 16:28, 41:52, 61:68, 81:88)
+training <- training[count2]
+testing <- testing[count2]
+
+## Build predictions with random forests
+
+library(randomForest)
+
+set.seed(647)
+
+fit <- randomForest(classe ~., data=training, importance=TRUE)
+pred <- predict(fit, testing)
+
+## In random forests, there is no need for cross-validation or a separate test set to get an 
+## unbiased estimate of the test set error.
+fit
+table(pred, testing$classe)
+
+## Predicting the 20 values for "classe"
+testing2 <- read.csv("pml-testing.csv")
+pred2 <- predict(fit, testing2)
+pred2
+
+
+```
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+varImpPlot(fit)
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
